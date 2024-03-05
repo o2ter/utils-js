@@ -26,15 +26,21 @@
 import _ from 'lodash';
 import { Awaitable } from './types';
 
+export const iterableToArray = <T>(iterable: Iterable<T>) => {
+  const array: T[] = [];
+  for (const obj of iterable) array.push(obj);
+  return array;
+};
+
+export const arrayToGenerator = <T>(array: T[]) => function* () { yield* array; }();
+
 export const asyncIterableToArray = async <T>(asyncIterable: AsyncIterable<T>) => {
   const array: T[] = [];
   for await (const obj of asyncIterable) array.push(obj);
   return array;
 };
 
-export const arrayToAsyncGenerator = <T>(array: Awaitable<T[]>) => async function* () {
-  yield* await array;
-}();
+export const arrayToAsyncGenerator = <T>(array: Awaitable<T[]>) => async function* () { yield* await array; }();
 
 export const asyncStream = <T>(callback: () => Promise<T[]> | AsyncIterable<T>) => ({
   then(...args: Parameters<Promise<T[]>['then']>) {
