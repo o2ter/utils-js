@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  stream.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,8 +23,11 @@
 //  THE SOFTWARE.
 //
 
-export * from './types';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './stream';
+import _ from 'lodash';
+import type { Readable } from 'node:stream';
+
+export const isReadableStream = (x: any): x is ReadableStream | Readable => {
+  if (typeof ReadableStream !== 'undefined' && x instanceof ReadableStream) return true;
+  if (typeof window === 'undefined' && x instanceof require('node:stream').Readable) return true;
+  return false;
+};

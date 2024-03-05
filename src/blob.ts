@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  blob.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,8 +23,8 @@
 //  THE SOFTWARE.
 //
 
-export * from './types';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './stream';
+export const isBlob = (x: any): x is Blob => {
+  if (typeof Blob !== 'undefined' && x instanceof Blob) return true;
+  if (typeof window === 'undefined' && x instanceof require('node:buffer').Blob) return true;
+  return false;
+};
