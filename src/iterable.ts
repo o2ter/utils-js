@@ -42,7 +42,7 @@ export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIter
 
 export const arrayToAsyncGenerator = <T>(array: Awaitable<T[]>) => async function* () { yield* await array; }();
 
-export const asyncStream = <T>(callback: () => Promise<T[]> | Awaitable<AsyncIterable<T>>) => ({
+export const asyncStream = <T>(callback: () => Promise<T[]> | AsyncIterable<T>) => ({
   then(...args: Parameters<Promise<T[]>['then']>) {
     const base = callback();
     const promise = base instanceof Promise ? base : asyncIterableToArray(base);
@@ -50,7 +50,7 @@ export const asyncStream = <T>(callback: () => Promise<T[]> | Awaitable<AsyncIte
   },
   [Symbol.asyncIterator]() {
     const base = callback();
-    const iterable = base instanceof Promise ? arrayToAsyncGenerator(base) : async function* () { yield* await base; }();
+    const iterable = base instanceof Promise ? arrayToAsyncGenerator(base) : base;
     return iterable[Symbol.asyncIterator]();
   },
 });
