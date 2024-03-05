@@ -34,15 +34,15 @@ export const iterableToArray = <T>(iterable: Iterable<T>) => {
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { yield* array; }();
 
-export const asyncIterableToArray = async <T>(asyncIterable: AsyncIterable<T>) => {
+export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIterable<T>>) => {
   const array: T[] = [];
-  for await (const obj of asyncIterable) array.push(obj);
+  for await (const obj of await asyncIterable) array.push(obj);
   return array;
 };
 
 export const arrayToAsyncGenerator = <T>(array: Awaitable<T[]>) => async function* () { yield* await array; }();
 
-export const asyncStream = <T>(callback: () => Promise<T[]> | AsyncIterable<T>) => ({
+export const asyncStream = <T>(callback: () => Promise<T[]> | Awaitable<AsyncIterable<T>>) => ({
   then(...args: Parameters<Promise<T[]>['then']>) {
     const base = callback();
     const promise = base instanceof Promise ? base : asyncIterableToArray(base);
@@ -50,19 +50,19 @@ export const asyncStream = <T>(callback: () => Promise<T[]> | AsyncIterable<T>) 
   },
   [Symbol.asyncIterator]() {
     const base = callback();
-    const iterable = base instanceof Promise ? arrayToAsyncGenerator(base) : base;
+    const iterable = base instanceof Promise ? arrayToAsyncGenerator(base) : async function* () { yield* await base; }();
     return iterable[Symbol.asyncIterator]();
   },
 });
 
 export async function* parallelMap<T, R>(
-  stream: AsyncIterable<T>,
+  stream: Awaitable<AsyncIterable<T>>,
   parallel: number,
   transform: (value: T) => PromiseLike<R>
 ) {
   const queue: Promise<R>[] = [];
   try {
-    for await (const value of stream) {
+    for await (const value of await stream) {
       if (queue.length >= parallel) yield queue.shift()!;
       queue.push((async () => transform(value))());
     }
@@ -73,7 +73,7 @@ export async function* parallelMap<T, R>(
 }
 
 export async function parallelEach<T>(
-  stream: AsyncIterable<T>,
+  stream: Awaitable<AsyncIterable<T>>,
   parallel: number,
   callback: (value: T) => PromiseLike<void>
 ) {
