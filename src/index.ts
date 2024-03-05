@@ -27,4 +27,5 @@ export * from './types';
 export * from './base64';
 export * from './buffer';
 export * from './blob';
+export * from './iterable';
 export * from './stream';
