@@ -42,7 +42,7 @@ export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIter
 
 type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
 
-class AsyncStream<T> {
+export class AsyncStream<T> {
 
   #source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>);
 
@@ -128,7 +128,7 @@ class AsyncStream<T> {
   }
 }
 
-export const asyncStream = <T>(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) => new AsyncStream(source);
+export const asyncStream = <T>(source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) => new AsyncStream(source);
 
 export async function* parallelMap<T, R>(
   stream: AsyncStreamSource<T>,
