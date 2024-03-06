@@ -23,6 +23,7 @@
 //  THE SOFTWARE.
 //
 
+import _ from 'lodash';
 import { expect, test } from '@jest/globals';
 import { asyncStream, base64ToBuffer, bufferToBase64, bufferToString } from '../src';
 
@@ -140,4 +141,32 @@ test('test asyncStream 10', async () => {
   }
 
   expect(result).toEqual([2, 3, 4, 5, 6]);
+});
+
+test('test asyncStream 11', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.flatMap(v => _.range(0, v))) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4]);
+});
+
+test('test asyncStream 12', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.flatMap(async v => _.range(0, v))) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4]);
 });
