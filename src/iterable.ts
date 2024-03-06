@@ -26,13 +26,19 @@
 import _ from 'lodash';
 import { Awaitable } from './types';
 
+export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
+
 export const iterableToArray = <T>(iterable: Iterable<T>) => {
   const array: T[] = [];
   for (const obj of iterable) array.push(obj);
   return array;
 };
 
-export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
+export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIterable<T>>) => {
+  const array: T[] = [];
+  for await (const obj of await asyncIterable) array.push(obj);
+  return array;
+};
 
 type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
 
