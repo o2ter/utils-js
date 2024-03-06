@@ -74,6 +74,15 @@ class AsyncStream<T> {
     });
   }
 
+  flatMap<R>(transform: (value: T) => AsyncStreamSource<R>) {
+    const self = this;
+    return asyncStream(async function* () {
+      for await (const value of self) {
+        yield* await transform(value);
+      }
+    });
+  }
+
   filter<R>(isIncluded: (value: T) => Awaitable<boolean>) {
     const self = this;
     return asyncStream(async function* () {
