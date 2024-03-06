@@ -32,7 +32,7 @@ export const iterableToArray = <T>(iterable: Iterable<T>) => {
   return array;
 };
 
-export const arrayToGenerator = <T>(array: T[]) => function* () { yield* array; }();
+export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
 
 type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
 
@@ -50,19 +50,25 @@ class AsyncStream<T> {
       const base = await source;
       if (_.isArray(base)) return base;
       const array: T[] = [];
-      for await (const obj of base) array.push(obj);
+      for await (const value of base) array.push(value);
       return array;
     })();
     return promise.then(...args);
   }
 
-  [Symbol.asyncIterator](): AsyncGenerator<Awaited<T>, void, undefined> {
+  makeAsyncIterable() {
     const source = _.isFunction(this.#source) ? this.#source() : this.#source;
-    const iterable = (async function* () {
-      if (Symbol.iterator in source || Symbol.asyncIterator in source) yield* source;
-      else yield* await source;
+    return (async function* () {
+      if (Symbol.iterator in source || Symbol.asyncIterator in source) {
+        for await (const value of source) yield value;
+      } else {
+        for await (const value of await source) yield value;
+      }
     })();
-    return iterable[Symbol.asyncIterator]();
+  }
+
+  [Symbol.asyncIterator]() {
+    return this.makeAsyncIterable()[Symbol.asyncIterator]();
   }
 
   map<R>(transform: (value: T) => Awaitable<R>) {
@@ -79,8 +85,11 @@ class AsyncStream<T> {
     return asyncStream(async function* () {
       for await (const value of self) {
         const iterable = transform(value);
-        if (Symbol.iterator in iterable || Symbol.asyncIterator in iterable) yield* iterable;
-        else yield* await iterable;
+        if (Symbol.iterator in iterable || Symbol.asyncIterator in iterable) {
+          for await (const value of iterable) yield value;
+        } else {
+          for await (const value of await iterable) yield value;
+        }
       }
     });
   }
@@ -118,15 +127,21 @@ class AsyncStream<T> {
         for await (const value of self) {
           if (queue.length >= parallel) {
             const iterable = queue.shift()!;
-            if (Symbol.iterator in iterable || Symbol.asyncIterator in iterable) yield* iterable;
-            else yield* await iterable;
+            if (Symbol.iterator in iterable || Symbol.asyncIterator in iterable) {
+              for await (const value of iterable) yield value;
+            } else {
+              for await (const value of await iterable) yield value;
+            }
           }
           queue.push(transform(value));
         }
         while (!_.isEmpty(queue)) {
           const iterable = queue.shift()!;
-          if (Symbol.iterator in iterable || Symbol.asyncIterator in iterable) yield* iterable;
-          else yield* await iterable;
+          if (Symbol.iterator in iterable || Symbol.asyncIterator in iterable) {
+            for await (const value of iterable) yield value;
+          } else {
+            for await (const value of await iterable) yield value;
+          }
         }
       } finally {
         await Promise.allSettled(queue);
