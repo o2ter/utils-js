@@ -113,3 +113,31 @@ test('test asyncStream 8', async () => {
 
   expect(result).toEqual([1, 2, 3, 4, 5]);
 });
+
+test('test asyncStream 9', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.map(v => v + 1)) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([2, 3, 4, 5, 6]);
+});
+
+test('test asyncStream 10', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.map(async v => v + 1)) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([2, 3, 4, 5, 6]);
+});

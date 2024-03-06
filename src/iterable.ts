@@ -63,7 +63,7 @@ class AsyncStream<T> {
     return iterable[Symbol.asyncIterator]();
   }
 
-  map<R>(transform: (value: T) => PromiseLike<R>) {
+  map<R>(transform: (value: T) => Awaitable<R>) {
     const self = this;
     return asyncStream(async function* () {
       for await (const value of self) {
