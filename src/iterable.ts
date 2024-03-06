@@ -108,6 +108,22 @@ class AsyncStream<T> {
     });
   }
 
+  parallelFlatMap<R>(parallel: number, transform: (value: T) => AsyncStreamSource<R>) {
+    const self = this;
+    return asyncStream(async function* () {
+      const queue: Promise<R[] | AsyncIterable<R>>[] = [];
+      try {
+        for await (const value of await self) {
+          if (queue.length >= parallel) yield* await queue.shift()!;
+          queue.push((async () => transform(value))());
+        }
+        while (!_.isEmpty(queue)) yield* await queue.shift()!;
+      } finally {
+        await Promise.allSettled(queue);
+      }
+    });
+  }
+
   async forEach(callback: (value: T) => Awaitable<void>) {
     for await (const value of this) {
       await callback(value);
