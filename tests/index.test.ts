@@ -115,7 +115,7 @@ test('test asyncStream 8', async () => {
   expect(result).toEqual([1, 2, 3, 4, 5]);
 });
 
-test('test asyncStream 9', async () => {
+test('test asyncStream map 1', async () => {
 
   const stream = asyncStream(async function* () {
     yield* [1, 2, 3, 4, 5];
@@ -129,7 +129,7 @@ test('test asyncStream 9', async () => {
   expect(result).toEqual([2, 3, 4, 5, 6]);
 });
 
-test('test asyncStream 10', async () => {
+test('test asyncStream map 2', async () => {
 
   const stream = asyncStream(async function* () {
     yield* [1, 2, 3, 4, 5];
@@ -143,7 +143,7 @@ test('test asyncStream 10', async () => {
   expect(result).toEqual([2, 3, 4, 5, 6]);
 });
 
-test('test asyncStream 11', async () => {
+test('test asyncStream flatMap 1', async () => {
 
   const stream = asyncStream(async function* () {
     yield* [1, 2, 3, 4, 5];
@@ -157,7 +157,7 @@ test('test asyncStream 11', async () => {
   expect(result).toEqual([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4]);
 });
 
-test('test asyncStream 12', async () => {
+test('test asyncStream flatMap 2', async () => {
 
   const stream = asyncStream(async function* () {
     yield* [1, 2, 3, 4, 5];
@@ -165,6 +165,62 @@ test('test asyncStream 12', async () => {
 
   const result: number[] = [];
   for await (const val of stream.flatMap(async v => _.range(0, v))) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4]);
+});
+
+test('test asyncStream parallelMap 1', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.parallelMap(2, v => v + 1)) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([2, 3, 4, 5, 6]);
+});
+
+test('test asyncStream parallelMap 2', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.parallelMap(2, async v => v + 1)) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([2, 3, 4, 5, 6]);
+});
+
+test('test asyncStream parallelFlatMap 1', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.parallelFlatMap(2, v => _.range(0, v))) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4]);
+});
+
+test('test asyncStream parallelFlatMap 2', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream.parallelFlatMap(2, async v => _.range(0, v))) {
     result.push(val);
   }
 
