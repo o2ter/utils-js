@@ -110,19 +110,7 @@ class AsyncStream<T> {
   }
 
   parallelMap<R>(parallel: number, transform: (value: T) => Awaitable<R>) {
-    const self = this;
-    return asyncStream(async function* () {
-      const queue: Awaitable<R>[] = [];
-      try {
-        for await (const value of self) {
-          if (queue.length >= parallel) yield queue.shift()!;
-          queue.push(transform(value));
-        }
-        while (!_.isEmpty(queue)) yield queue.shift()!;
-      } finally {
-        await Promise.allSettled(queue);
-      }
-    });
+    return asyncStream(parallelMap(this, parallel, transform));
   }
 
   parallelFlatMap<R>(parallel: number, transform: (value: T) => AsyncStreamSource<R>) {
@@ -162,8 +150,33 @@ class AsyncStream<T> {
   }
 
   async parallelEach(parallel: number, callback: (value: T) => Awaitable<void>) {
-    for await (const _ of this.parallelMap(parallel, callback)) { }
+    await parallelEach(this, parallel, callback);
   }
 }
 
 export const asyncStream = <T>(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) => new AsyncStream(source);
+
+export async function* parallelMap<T, R>(
+  stream: Awaitable<AsyncIterable<T>>,
+  parallel: number,
+  transform: (value: T) => Awaitable<R>
+) {
+  const queue: Promise<R>[] = [];
+  try {
+    for await (const value of await stream) {
+      if (queue.length >= parallel) yield queue.shift()!;
+      queue.push((async () => transform(value))());
+    }
+    while (!_.isEmpty(queue)) yield queue.shift()!;
+  } finally {
+    await Promise.allSettled(queue);
+  }
+}
+
+export async function parallelEach<T>(
+  stream: Awaitable<AsyncIterable<T>>,
+  parallel: number,
+  callback: (value: T) => Awaitable<void>
+) {
+  for await (const _ of parallelMap(stream, parallel, callback)) { }
+}
