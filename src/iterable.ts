@@ -45,23 +45,20 @@ class AsyncStream<T> {
   }
 
   then(...args: Parameters<Promise<T[]>['then']>) {
-    const self = this;
+    const source = _.isFunction(this.#source) ? this.#source() : this.#source;
     const promise = (async () => {
-      const base = _.isFunction(self.#source) ? await self.#source() : await self.#source;
+      const base = await source;
       if (_.isArray(base)) return base;
       const array: T[] = [];
-      for await (const obj of await base) array.push(obj);
+      for await (const obj of base) array.push(obj);
       return array;
     })();
     return promise.then(...args);
   }
 
   [Symbol.asyncIterator]() {
-    const self = this;
-    const iterable = (async function* () {
-      const base = _.isFunction(self.#source) ? await self.#source() : await self.#source;
-      yield* base;
-    })();
+    const source = _.isFunction(this.#source) ? this.#source() : this.#source;
+    const iterable = (async function* () { yield* await source; })();
     return iterable[Symbol.asyncIterator]();
   }
 
@@ -78,7 +75,8 @@ class AsyncStream<T> {
     const self = this;
     return asyncStream(async function* () {
       for await (const value of self) {
-        yield* await transform(value);
+        const iterable = transform(value);
+        yield* iterable instanceof AsyncStream ? iterable as AsyncStream<R> : await iterable;
       }
     });
   }
@@ -97,7 +95,7 @@ class AsyncStream<T> {
     return asyncStream(async function* () {
       const queue: Promise<R>[] = [];
       try {
-        for await (const value of await self) {
+        for await (const value of self) {
           if (queue.length >= parallel) yield queue.shift()!;
           queue.push((async () => transform(value))());
         }
@@ -113,11 +111,17 @@ class AsyncStream<T> {
     return asyncStream(async function* () {
       const queue: Promise<R[] | AsyncIterable<R>>[] = [];
       try {
-        for await (const value of await self) {
-          if (queue.length >= parallel) yield* await queue.shift()!;
+        for await (const value of self) {
+          if (queue.length >= parallel) {
+            const iterable = queue.shift()!;
+            yield* iterable instanceof AsyncStream ? iterable as AsyncStream<R> : await iterable;
+          }
           queue.push((async () => transform(value))());
         }
-        while (!_.isEmpty(queue)) yield* await queue.shift()!;
+        while (!_.isEmpty(queue)) {
+          const iterable = queue.shift()!;
+          yield* iterable instanceof AsyncStream ? iterable as AsyncStream<R> : await iterable;
+        }
       } finally {
         await Promise.allSettled(queue);
       }
