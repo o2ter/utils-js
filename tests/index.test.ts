@@ -36,16 +36,80 @@ test('test base64 decode', async () => {
 
 test('test asyncStream 1', async () => {
 
-  const result = await asyncStream(() => Promise.resolve([1, 2, 3, 4, 5]));
+  const result = await asyncStream([1, 2, 3, 4, 5]);
 
   expect(result).toEqual([1, 2, 3, 4, 5]);
 });
 
 test('test asyncStream 2', async () => {
 
+  const result = await asyncStream(Promise.resolve([1, 2, 3, 4, 5]));
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 3', async () => {
+
+  const result = await asyncStream(() => Promise.resolve([1, 2, 3, 4, 5]));
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 4', async () => {
+
   const result = await asyncStream(async function* () { 
     yield* [1, 2, 3, 4, 5];
   });
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 5', async () => {
+
+  const stream = asyncStream([1, 2, 3, 4, 5]);
+
+  const result: number[] = [];
+  for await (const val of stream) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 6', async () => {
+
+  const stream = asyncStream(Promise.resolve([1, 2, 3, 4, 5]));
+
+  const result: number[] = [];
+  for await (const val of stream) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 7', async () => {
+
+  const stream = asyncStream(() => Promise.resolve([1, 2, 3, 4, 5]));
+
+  const result: number[] = [];
+  for await (const val of stream) {
+    result.push(val);
+  }
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 8', async () => {
+
+  const stream = asyncStream(async function* () {
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  const result: number[] = [];
+  for await (const val of stream) {
+    result.push(val);
+  }
 
   expect(result).toEqual([1, 2, 3, 4, 5]);
 });

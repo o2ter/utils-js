@@ -34,26 +34,46 @@ export const iterableToArray = <T>(iterable: Iterable<T>) => {
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { yield* array; }();
 
-export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIterable<T>>) => {
-  const array: T[] = [];
-  for await (const obj of await asyncIterable) array.push(obj);
-  return array;
-};
+class AsyncStream<T> {
 
-export const arrayToAsyncGenerator = <T>(array: Awaitable<T[]>) => async function* () { yield* await array; }();
+  #source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>);
 
-export const asyncStream = <T>(callback: () => Promise<T[]> | AsyncIterable<T>) => ({
+  constructor(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) {
+    this.#source = source;
+  }
+
   then(...args: Parameters<Promise<T[]>['then']>) {
-    const base = callback();
-    const promise = base instanceof Promise ? base : asyncIterableToArray(base);
+    const self = this;
+    const promise = (async () => {
+      const base = _.isFunction(self.#source) ? await self.#source() : await self.#source;
+      if (_.isArray(base)) return base;
+      const array: T[] = [];
+      for await (const obj of await base) array.push(obj);
+      return array;
+    })();
     return promise.then(...args);
-  },
+  }
+
   [Symbol.asyncIterator]() {
-    const base = callback();
-    const iterable = base instanceof Promise ? arrayToAsyncGenerator(base) : base;
+    const self = this;
+    const iterable = (async function* () {
+      const base = _.isFunction(self.#source) ? await self.#source() : await self.#source;
+      yield* base;
+    })();
     return iterable[Symbol.asyncIterator]();
-  },
-});
+  }
+
+  map<R>(transform: (value: T) => PromiseLike<R>) {
+    const self = this;
+    return asyncStream(async function* () {
+      for await (const value of self) {
+        yield await transform(value);
+      }
+    })
+  }
+}
+
+export const asyncStream = <T>(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) => new AsyncStream(source);
 
 export async function* parallelMap<T, R>(
   stream: Awaitable<AsyncIterable<T>>,
