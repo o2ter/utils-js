@@ -24,7 +24,7 @@
 //
 
 import { expect, test } from '@jest/globals';
-import { base64ToBuffer, bufferToBase64, bufferToString } from '../src';
+import { asyncStream, base64ToBuffer, bufferToBase64, bufferToString } from '../src';
 
 test('test base64 encode', async () => {
   expect(bufferToBase64('hello, world')).toBe('aGVsbG8sIHdvcmxk');
@@ -32,4 +32,20 @@ test('test base64 encode', async () => {
 
 test('test base64 decode', async () => {
   expect(bufferToString(base64ToBuffer('aGVsbG8sIHdvcmxk'))).toBe('hello, world');
+});
+
+test('test asyncStream 1', async () => {
+
+  const result = await asyncStream(() => Promise.resolve([1, 2, 3, 4, 5]));
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
+});
+
+test('test asyncStream 2', async () => {
+
+  const result = await asyncStream(async function* () { 
+    yield* [1, 2, 3, 4, 5];
+  });
+
+  expect(result).toEqual([1, 2, 3, 4, 5]);
 });
