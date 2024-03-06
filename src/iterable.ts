@@ -34,11 +34,13 @@ export const iterableToArray = <T>(iterable: Iterable<T>) => {
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { yield* array; }();
 
+type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
+
 class AsyncStream<T> {
 
-  #source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>);
+  #source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>);
 
-  constructor(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) {
+  constructor(source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) {
     this.#source = source;
   }
 
