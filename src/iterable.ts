@@ -69,7 +69,32 @@ class AsyncStream<T> {
       for await (const value of self) {
         yield await transform(value);
       }
-    })
+    });
+  }
+
+  filter<R>(isIncluded: (value: T) => Awaitable<boolean>) {
+    const self = this;
+    return asyncStream(async function* () {
+      for await (const value of self) {
+        if (await isIncluded(value)) yield value;
+      }
+    });
+  }
+
+  parallelMap<R>(parallel: number, transform: (value: T) => Awaitable<R>) {
+    const self = this;
+    return asyncStream(async function* () {
+      const queue: Promise<R>[] = [];
+      try {
+        for await (const value of await self) {
+          if (queue.length >= parallel) yield queue.shift()!;
+          queue.push((async () => transform(value))());
+        }
+        while (!_.isEmpty(queue)) yield queue.shift()!;
+      } finally {
+        await Promise.allSettled(queue);
+      }
+    });
   }
 
   async forEach(callback: (value: T) => Awaitable<void>) {
@@ -78,38 +103,9 @@ class AsyncStream<T> {
     }
   }
 
-  parallelMap<R>(parallel: number, transform: (value: T) => Awaitable<R>) {
-    return asyncStream(parallelMap(this, parallel, transform));
-  }
-
-  parallelEach(parallel: number, callback: (value: T) => Awaitable<void>) {
-    return parallelEach(this, parallel, callback);
+  async parallelEach(parallel: number, callback: (value: T) => Awaitable<void>) {
+    for await (const _ of this.parallelMap(parallel, callback)) { }
   }
 }
 
 export const asyncStream = <T>(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) => new AsyncStream(source);
-
-export async function* parallelMap<T, R>(
-  stream: Awaitable<AsyncIterable<T>>,
-  parallel: number,
-  transform: (value: T) => Awaitable<R>
-) {
-  const queue: Promise<R>[] = [];
-  try {
-    for await (const value of await stream) {
-      if (queue.length >= parallel) yield queue.shift()!;
-      queue.push((async () => transform(value))());
-    }
-    while (!_.isEmpty(queue)) yield queue.shift()!;
-  } finally {
-    await Promise.allSettled(queue);
-  }
-}
-
-export async function parallelEach<T>(
-  stream: Awaitable<AsyncIterable<T>>,
-  parallel: number,
-  callback: (value: T) => Awaitable<void>
-) {
-  for await (const _ of parallelMap(stream, parallel, callback)) { }
-}
