@@ -71,6 +71,20 @@ class AsyncStream<T> {
       }
     })
   }
+
+  async forEach(callback: (value: T) => Awaitable<void>) {
+    for await (const value of this) {
+      await callback(value);
+    }
+  }
+
+  parallelMap<R>(parallel: number, transform: (value: T) => Awaitable<R>) {
+    return asyncStream(parallelMap(this, parallel, transform));
+  }
+
+  parallelEach(parallel: number, callback: (value: T) => Awaitable<void>) {
+    return parallelEach(this, parallel, callback);
+  }
 }
 
 export const asyncStream = <T>(source: Awaitable<T[] | AsyncIterable<T>> | (() => Awaitable<T[] | AsyncIterable<T>>)) => new AsyncStream(source);
@@ -78,7 +92,7 @@ export const asyncStream = <T>(source: Awaitable<T[] | AsyncIterable<T>> | (() =
 export async function* parallelMap<T, R>(
   stream: Awaitable<AsyncIterable<T>>,
   parallel: number,
-  transform: (value: T) => PromiseLike<R>
+  transform: (value: T) => Awaitable<R>
 ) {
   const queue: Promise<R>[] = [];
   try {
@@ -95,7 +109,7 @@ export async function* parallelMap<T, R>(
 export async function parallelEach<T>(
   stream: Awaitable<AsyncIterable<T>>,
   parallel: number,
-  callback: (value: T) => PromiseLike<void>
+  callback: (value: T) => Awaitable<void>
 ) {
   for await (const _ of parallelMap(stream, parallel, callback)) { }
 }
