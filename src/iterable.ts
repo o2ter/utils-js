@@ -51,7 +51,7 @@ class AsyncStream<T> {
   }
 
   then(...args: Parameters<Promise<T[]>['then']>) {
-    const source = _.isFunction(this.#source) || typeof this.#source === 'function' ? this.#source() : this.#source;
+    const source = typeof this.#source === 'function' ? this.#source() : this.#source;
     const promise = (async () => {
       const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
       if (_.isArray(iterable)) return iterable;
@@ -63,7 +63,7 @@ class AsyncStream<T> {
   }
 
   makeAsyncIterable() {
-    const source = _.isFunction(this.#source) || typeof this.#source === 'function' ? this.#source() : this.#source;
+    const source = typeof this.#source === 'function' ? this.#source() : this.#source;
     return (async function* () {
       const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
       for await (const value of iterable) yield value;
