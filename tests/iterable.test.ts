@@ -25,15 +25,7 @@
 
 import _ from 'lodash';
 import { expect, test } from '@jest/globals';
-import { asyncStream, base64ToBuffer, bufferToBase64, bufferToString } from '../src';
-
-test('test base64 encode', async () => {
-  expect(bufferToBase64('hello, world')).toBe('aGVsbG8sIHdvcmxk');
-});
-
-test('test base64 decode', async () => {
-  expect(bufferToString(base64ToBuffer('aGVsbG8sIHdvcmxk'))).toBe('hello, world');
-});
+import { asyncStream } from '../src';
 
 test('test asyncStream 1', async () => {
 
