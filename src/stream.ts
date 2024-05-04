@@ -34,22 +34,6 @@ export const isReadableStream = (x: any): x is ReadableStream | Readable => {
   return false;
 };
 
-export const streamToIterable = <T>(
-  stream: ReadableStream<T> | AsyncIterable<T>
-) => {
-  if (Symbol.asyncIterator in stream) return stream;
-  return {
-    [Symbol.asyncIterator]: async function* () {
-      const reader = stream.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) return;
-        yield value;
-      }
-    },
-  };
-};
-
 const iterableToNodeStream = <T>(
   iterable: Awaitable<AsyncIterable<T>> | (() => Awaitable<AsyncIterable<T>>)
 ) => {
