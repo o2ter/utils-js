@@ -16,7 +16,7 @@ const configs = {
 
 const resolvePlugin = resolve({
   extensions: [
-    '.ts', '.tsx', '.mjs', '.js',
+    '.tsx', '.jsx', '.ts', '.mjs', '.js',
   ]
 });
 
