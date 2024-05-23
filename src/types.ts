@@ -34,7 +34,10 @@ type OverloadUnionRecursive<TOverload, TPartialOverload = unknown> = TOverload e
   > | ((...args: TArgs) => TReturn)
   : never;
 
-export type OverloadUnion<TOverload extends (...args: any[]) => any> = OverloadUnionRecursive<(() => never) & TOverload>;
+export type OverloadUnion<TOverload extends (...args: any[]) => any> = Exclude<
+  OverloadUnionRecursive<(() => never) & TOverload>,
+  TOverload extends () => never ? never : () => never
+>;
 
 export type OverloadParameters<T extends (...args: any[]) => any> = Parameters<OverloadUnion<T>>;
 export type OverloadReturnType<T extends (...args: any[]) => any> = ReturnType<OverloadUnion<T>>;
