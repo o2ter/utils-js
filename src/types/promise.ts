@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  types.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,11 +23,4 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable';
-export * from './stream';
+export type Awaitable<T> = T | PromiseLike<T>;

@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  types.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,11 +23,18 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable';
-export * from './stream';
+export type Equals<X, Y, A = X, B = never> =
+  (<T>() => T extends X ? 1 : 2) extends
+  (<T>() => T extends Y ? 1 : 2) ? A : B;
+
+export type WritableKeys<T> = {
+  [P in keyof T]-?: Equals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, P>
+}[keyof T];
+
+export type ReadonlyKeys<T> = {
+  [P in keyof T]-?: Equals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, never, P>
+}[keyof T];
+
+export type ExcludeFunctions<T> = Pick<T, Exclude<{
+  [K in keyof T]: T[K] extends Function ? never : K;
+}[keyof T], undefined>>;

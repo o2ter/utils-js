@@ -24,7 +24,7 @@
 //
 
 import _ from 'lodash';
-import { Awaitable } from './types';
+import { Awaitable } from './types/promise';
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
 

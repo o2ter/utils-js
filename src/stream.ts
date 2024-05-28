@@ -25,7 +25,7 @@
 
 import _ from 'lodash';
 import type { Readable } from 'node:stream';
-import { Awaitable } from './types';
+import { Awaitable } from './types/promise';
 import { binaryToBuffer } from './buffer';
 
 export const isReadableStream = (x: any): x is ReadableStream | Readable => {

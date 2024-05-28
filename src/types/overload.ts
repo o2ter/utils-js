@@ -23,8 +23,6 @@
 //  THE SOFTWARE.
 //
 
-export type Awaitable<T> = T | PromiseLike<T>;
-
 type OverloadUnionRecursive<TOverload, TPartialOverload = unknown> = TOverload extends (...args: infer TArgs) => infer TReturn
   ? TPartialOverload extends TOverload
   ? never
