@@ -35,6 +35,6 @@ export type ReadonlyKeys<T> = {
   [P in keyof T]-?: Equals<{ [Q in P]: T[P] }, { -readonly [Q in P]: T[P] }, never, P>
 }[keyof T];
 
-export type ExcludeFunctions<T> = Pick<T, Exclude<{
-  [K in keyof T]: T[K] extends Function ? never : K;
+export type OmitType<T, U> = Pick<T, Exclude<{
+  [K in keyof T]: T[K] extends U ? never : K;
 }[keyof T], undefined>>;
