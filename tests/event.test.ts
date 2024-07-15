@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  index.test.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,12 +23,25 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable';
-export * from './stream';
-export * from './event';
+import _ from 'lodash';
+import { expect, test } from '@jest/globals';
+import { asyncIterableToArray, EventIterator } from '../src';
+
+test('test EventIterator', async () => {
+
+  const list = EventIterator((push, stop) => {
+    let counter = 0;
+    const interval = setInterval(() => {
+      push(counter++);
+      if (counter > 5) {
+        stop();
+        clearInterval(interval);
+      }
+    }, 10);
+  });
+
+  const result = await asyncIterableToArray(list);
+
+  expect(result).toEqual([0, 1, 2, 3, 4]);
+
+});

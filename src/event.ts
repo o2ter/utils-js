@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  event.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,12 +23,57 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable';
-export * from './stream';
-export * from './event';
+import _ from 'lodash';
+import { Awaitable } from './types/promise';
+
+const withResolvers = <T>() => {
+  let resolve: (value: T | PromiseLike<T>) => void;
+  let reject: (reason?: any) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return [resolve!, reject!, promise] as const;
+}
+
+export const EventIterator = async function* <T, R = any>(
+  callback: (
+    push: (item: T) => void,
+    stop: (result?: R) => void,
+  ) => Awaitable<void>,
+) {
+
+  let [resolve, reject, promise] = withResolvers<void>();
+  let queue: T[] = [];
+  let stopped = false;
+  let result: R | undefined;
+
+  const push = (item: T) => {
+    if (stopped) return;
+    queue.push(item);
+    resolve();
+  };
+
+  const stop = (res?: R) => {
+    stopped = true;
+    result = res;
+    resolve();
+  };
+
+  (async () => {
+    try {
+      await callback(push, stop);
+    } catch (e) {
+      reject(e);
+    }
+  })();
+
+  while (true) {
+    await promise;
+    if (stopped) return result;
+    let _queue = queue;
+    [resolve, reject, promise] = withResolvers<void>();
+    queue = [];
+    yield* _queue;
+  }
+};
