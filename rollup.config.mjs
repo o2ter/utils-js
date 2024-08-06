@@ -5,13 +5,14 @@ import babel from '@rollup/plugin-babel';
 import json from '@rollup/plugin-json';
 import dts from 'rollup-plugin-dts';
 
-const configs = {
+const rollupConfig = {
   input: {
     index: 'src/index',
   },
   external: [
     /node_modules/
   ],
+  makeAbsoluteExternalsRelative: true,
 };
 
 const resolvePlugin = resolve({
@@ -35,7 +36,7 @@ const rollupPlugins = [
 
 export default [
   {
-    ...configs,
+    ...rollupConfig,
     output: [
       {
         entryFileNames: '[name].js',
@@ -58,7 +59,7 @@ export default [
     ],
   },
   {
-    ...configs,
+    ...rollupConfig,
     output: [
       {
         entryFileNames: '[name].d.ts',
