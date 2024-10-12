@@ -27,6 +27,7 @@ import _ from 'lodash';
 import type { Readable } from 'node:stream';
 import { Awaitable } from './types/promise';
 import { binaryToBuffer } from './buffer';
+import { BinaryData } from './types/buffer';
 
 export const isReadableStream = (x: any): x is ReadableStream | Readable => {
   if (typeof ReadableStream !== 'undefined' && x instanceof ReadableStream) return true;
@@ -81,7 +82,7 @@ export async function* binaryStreamChunk(
   if (Symbol.asyncIterator in stream) {
     let buffer = Buffer.from([]);
     for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, binaryToBuffer(chunk)]);
+      buffer = Buffer.concat([buffer, binaryToBuffer(chunk)] as any);
       while (buffer.byteLength >= chunkSize) {
         yield buffer.subarray(0, chunkSize);
         buffer = buffer.subarray(chunkSize);

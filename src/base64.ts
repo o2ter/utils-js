@@ -24,6 +24,7 @@
 //
 
 import _ from 'lodash';
+import { BinaryData } from './types/buffer';
 
 export const base64ToBuffer = typeof window === 'undefined' ?
   (base64: string) => Buffer.from(base64, 'base64') :
@@ -39,7 +40,10 @@ const _bufferToBase64 = typeof window === 'undefined' ?
 
 export const bufferToBase64 = (buffer: string | BinaryData) => {
   if (_.isString(buffer)) return _stringToBase64(buffer);
-  if (typeof Buffer !== 'undefined' && buffer instanceof Buffer) return Buffer.from(buffer).toString('base64');
-  if (ArrayBuffer.isView(buffer)) buffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  if (typeof Buffer !== 'undefined' && buffer instanceof Buffer) return buffer.toString('base64');
+  if (ArrayBuffer.isView(buffer)) {
+    const _buffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    return _bufferToBase64(_buffer);
+  }
   return _bufferToBase64(buffer);
 }

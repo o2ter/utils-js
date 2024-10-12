@@ -23,23 +23,4 @@
 //  THE SOFTWARE.
 //
 
-import _ from 'lodash';
-import { BinaryData } from './types/buffer';
-
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-
-export const isBinaryData = (x: any): x is BinaryData => _.isArrayBuffer(x) || ArrayBuffer.isView(x);
-
-export const binaryToBuffer = (buffer: BinaryData) => _.isArrayBuffer(buffer)
-  ? Buffer.from(buffer)
-  : Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-
-export const stringToBuffer = typeof Buffer !== 'undefined'
-  ? (str: string) => Buffer.from(str, 'utf8')
-  : (str: string) => enc.encode(str);
-
-export const bufferToString = (buffer: Buffer | Uint8Array) =>
-  typeof Buffer !== 'undefined' && buffer instanceof Buffer
-    ? buffer.toString('utf8')
-    : dec.decode(buffer);
+export type BinaryData = ArrayBuffer | ArrayBufferView;

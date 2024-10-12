@@ -24,6 +24,7 @@
 //
 
 export * from './types/basic';
+export * from './types/buffer';
 export * from './types/promise';
 export * from './types/overload';
 export * from './base64';
