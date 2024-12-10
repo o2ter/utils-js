@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  prototype.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2024 O2ter Limited. All rights reserved.
@@ -23,14 +23,10 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/buffer';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable';
-export * from './stream';
-export * from './event';
-export * from './prototype';
+import _ from 'lodash';
+
+export const prototypes = (x: any): any[] => {
+  const prototype = Object.getPrototypeOf(x);
+  if (_.isNil(prototype) || prototype === Object.prototype) return [];
+  return [prototype, ...prototypes(prototype)];
+};
