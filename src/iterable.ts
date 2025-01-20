@@ -42,6 +42,11 @@ export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIter
 
 type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
 
+const makeIterator = async <T>(source: AsyncStreamSource<T>) => {
+  const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
+  return Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
+};
+
 class AsyncStream<T> {
 
   #source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>);
@@ -65,8 +70,7 @@ class AsyncStream<T> {
   makeAsyncIterable() {
     const source = typeof this.#source === 'function' ? this.#source() : this.#source;
     return (async function* () {
-      const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
-      const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
+      const iterator = await makeIterator(source);
       try {
         for (let step = await iterator.next(); !step.done; step = await iterator.next())
           yield step.value;
@@ -156,8 +160,7 @@ export async function* parallelMap<T, R>(
   transform: (value: T) => Awaitable<R>
 ) {
   const queue: Promise<R>[] = [];
-  const source = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
-  const iterator = Symbol.iterator in source ? source[Symbol.iterator]() : source[Symbol.asyncIterator]();
+  const iterator = await makeIterator(stream);
   try {
     for (let step = await iterator.next(); !step.done; step = await iterator.next()) {
       if (queue.length >= parallel) yield await queue.shift()!;
@@ -178,38 +181,33 @@ export async function* parallelFlatMap<T, R>(
   transform: (value: T) => AsyncStreamSource<R>
 ) {
   const queue: AsyncStreamSource<R>[] = [];
-  const source = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
-  const iterator = Symbol.iterator in source ? source[Symbol.iterator]() : source[Symbol.asyncIterator]();
+  const iterator = await makeIterator(stream);
   try {
     for (let step = await iterator.next(); !step.done; step = await iterator.next()) {
       if (queue.length >= parallel) {
-        const transformed = queue.shift()!;
-        const iterable = Symbol.iterator in transformed || Symbol.asyncIterator in transformed ? transformed : await transformed;
-        const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
+        const iterator = await makeIterator(queue.shift()!);
         try {
           for (let step = await iterator.next(); !step.done; step = await iterator.next())
             yield step.value;
         } catch (error) {
-          if ('throw' in iterable && _.isFunction(iterable.throw)) await iterable.throw(error);
+          if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
           else throw error;
         }
       }
       queue.push(transform(step.value));
     }
     while (!_.isEmpty(queue)) {
-      const stream = queue.shift()!;
-      const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
-      const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
+      const iterator = await makeIterator(queue.shift()!);
       try {
         for (let step = await iterator.next(); !step.done; step = await iterator.next())
           yield step.value;
       } catch (error) {
-        if ('throw' in iterable && _.isFunction(iterable.throw)) await iterable.throw(error);
+        if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
         else throw error;
       }
     }
   } catch (error) {
-    if ('throw' in source && _.isFunction(source.throw)) await source.throw(error);
+    if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
     else throw error;
   } finally {
     await Promise.allSettled(queue);
