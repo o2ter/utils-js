@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  index.test.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2025 O2ter Limited. All rights reserved.
@@ -23,15 +23,20 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/buffer';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable/iterable';
-export * from './iterable/stream';
-export * from './iterable/pool';
-export * from './iterable/event';
-export * from './prototype';
+import _ from 'lodash';
+import { expect, test } from '@jest/globals';
+import { asyncIterableToArray, PoolledIterator } from '../src';
+
+test('test PoolledIterator', async () => {
+
+  const list = PoolledIterator(10, async function* () {
+    for (const value of _.range(0, 10)) {
+      yield value;
+    }
+  });
+
+  const result = await asyncIterableToArray(list);
+
+  expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+});

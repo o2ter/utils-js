@@ -1,5 +1,5 @@
 //
-//  index.ts
+//  pool.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2025 O2ter Limited. All rights reserved.
@@ -23,15 +23,44 @@
 //  THE SOFTWARE.
 //
 
-export * from './types/basic';
-export * from './types/buffer';
-export * from './types/promise';
-export * from './types/overload';
-export * from './base64';
-export * from './buffer';
-export * from './blob';
-export * from './iterable/iterable';
-export * from './iterable/stream';
-export * from './iterable/pool';
-export * from './iterable/event';
-export * from './prototype';
+import _ from 'lodash';
+import { AsyncStreamSource } from '../types/iterable';
+import { withResolvers } from '../internal';
+
+export const PoolledIterator = <T>(size: number, source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) => {
+  const pool: T[] = [];
+  let done: boolean | undefined;
+  let push = withResolvers<void>();
+  let poll = withResolvers<void>();
+
+  (async () => {
+    try {
+      const stream = typeof source === 'function' ? source() : source;
+      const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
+      for await (const value of iterable) {
+        if (pool.length >= size) {
+          await poll[2];
+          poll = withResolvers();
+        }
+        pool.push(value);
+        push[0]();
+      }
+    } catch (e) {
+      push[1](e);
+    } finally {
+      done = true;
+    }
+  })();
+
+  return (async function* () {
+    while (!done) {
+      try {
+        if (!_.isEmpty(pool)) yield* pool;
+      } catch (e) {
+        console.error(e);
+      }
+      await push[2];
+      push = withResolvers();
+    }
+  })();
+};
