@@ -29,13 +29,52 @@ import { asyncIterableToArray, PoolledIterator } from '../src';
 
 test('test PoolledIterator', async () => {
 
-  const list = PoolledIterator(10, async function* () {
+  const list = PoolledIterator(5, async function* () {
     for (const value of _.range(0, 10)) {
       yield value;
+      await new Promise(res => setTimeout(res, 100));
     }
   });
 
   const result = await asyncIterableToArray(list);
+
+  expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+});
+
+test('test PoolledIterator 2', async () => {
+
+  const list = PoolledIterator(5, async function* () {
+    for (const value of _.range(0, 10)) {
+      yield value;
+      await new Promise(res => setTimeout(res, 10));
+    }
+  });
+
+  const result: number[] = [];
+  for await (const value of list) {
+    result.push(value);
+    await new Promise(res => setTimeout(res, 200));
+  }
+
+  expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+});
+
+test('test PoolledIterator 3', async () => {
+
+  const list = PoolledIterator(5, async function* () {
+    for (const value of _.range(0, 10)) {
+      yield value;
+      await new Promise(res => setTimeout(res, 200));
+    }
+  });
+
+  const result: number[] = [];
+  for await (const value of list) {
+    result.push(value);
+    await new Promise(res => setTimeout(res, 10));
+  }
 
   expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 

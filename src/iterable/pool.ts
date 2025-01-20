@@ -28,9 +28,9 @@ import { AsyncStreamSource } from '../types/iterable';
 import { withResolvers } from '../internal';
 
 export const PoolledIterator = <T>(size: number, source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) => {
-  const pool: T[] = [];
+  let pool: T[] = [];
   let done: boolean | undefined;
-  let push = withResolvers<void>();
+  let push = withResolvers<T[]>();
   let poll = withResolvers<void>();
 
   (async () => {
@@ -43,8 +43,9 @@ export const PoolledIterator = <T>(size: number, source: AsyncStreamSource<T> | 
           poll = withResolvers();
         }
         pool.push(value);
-        push[0]();
+        push[0](pool);
       }
+      push[0]([]);
     } catch (e) {
       push[1](e);
     } finally {
@@ -55,12 +56,13 @@ export const PoolledIterator = <T>(size: number, source: AsyncStreamSource<T> | 
   return (async function* () {
     while (!done) {
       try {
-        if (!_.isEmpty(pool)) yield* pool;
+        yield* await push[2];
+        push = withResolvers();
+        pool = [];
+        poll[0]();
       } catch (e) {
         console.error(e);
       }
-      await push[2];
-      push = withResolvers();
     }
   })();
 };
