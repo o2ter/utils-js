@@ -42,7 +42,7 @@ export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIter
 
 type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
 
-const makeIterator = async <T>(source: AsyncStreamSource<T>) => {
+export const makeIterator = async <T>(source: AsyncStreamSource<T>) => {
   const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
   return Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
 };

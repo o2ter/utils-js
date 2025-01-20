@@ -28,6 +28,7 @@ import type { Readable } from 'node:stream';
 import { Awaitable } from './types/promise';
 import { binaryToBuffer } from './buffer';
 import { BinaryData } from './types/buffer';
+import { makeIterator } from './iterable';
 
 export const isReadableStream = (x: any): x is ReadableStream | Readable => {
   if (typeof ReadableStream !== 'undefined' && x instanceof ReadableStream) return true;
@@ -40,8 +41,14 @@ const iterableToNodeStream = <T>(
 ) => {
   const _Readable = require('node:stream').Readable as typeof Readable;
   return _Readable.from((async function* () {
-    const _iterable = _.isFunction(iterable) ? iterable() : iterable;
-    yield* await _iterable;
+    const iterator = await makeIterator(_.isFunction(iterable) ? iterable() : iterable);
+    try {
+      for (let step = await iterator.next(); !step.done; step = await iterator.next())
+        yield step.value;
+    } catch (error) {
+      if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
+      else throw error;
+    }
   })());
 }
 
@@ -69,6 +76,9 @@ const iterableToReadableStream = <T>(
       } catch (e) {
         controller.error(e);
       }
+    },
+    async cancel(reason) {
+      await iterator.throw?.(_.isString(reason) ? Error(reason) : reason ?? Error('aborted'));
     },
   });
 }
