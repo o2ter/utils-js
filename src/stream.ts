@@ -28,7 +28,7 @@ import type { Readable } from 'node:stream';
 import { Awaitable } from './types/promise';
 import { binaryToBuffer } from './buffer';
 import { BinaryData } from './types/buffer';
-import { makeIterator } from './iterable';
+import { makeIterator } from './internal';
 
 export const isReadableStream = (x: any): x is ReadableStream | Readable => {
   if (typeof ReadableStream !== 'undefined' && x instanceof ReadableStream) return true;

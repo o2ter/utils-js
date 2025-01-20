@@ -25,6 +25,8 @@
 
 import _ from 'lodash';
 import { Awaitable } from './types/promise';
+import { AsyncStreamSource } from './types/iterable';
+import { makeIterator } from './internal';
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
 
@@ -38,13 +40,6 @@ export const asyncIterableToArray = async <T>(asyncIterable: Awaitable<AsyncIter
   const array: T[] = [];
   for await (const obj of await asyncIterable) array.push(obj);
   return array;
-};
-
-type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
-
-export const makeIterator = async <T>(source: AsyncStreamSource<T>) => {
-  const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
-  return Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
 };
 
 class AsyncStream<T> {

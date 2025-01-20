@@ -1,5 +1,5 @@
 //
-//  event.ts
+//  internal.ts
 //
 //  The MIT License
 //  Copyright (c) 2021 - 2025 O2ter Limited. All rights reserved.
@@ -24,47 +24,19 @@
 //
 
 import _ from 'lodash';
-import { Awaitable } from './types/promise';
-import { withResolvers } from './internal';
+import { AsyncStreamSource } from './types/iterable';
 
-export const EventIterator = async function* <T, R = any>(
-  callback: (
-    push: (item: T) => void,
-    stop: (result?: R) => void,
-  ) => Awaitable<void>,
-) {
+export const withResolvers = <T>() => {
+  let resolve: (value: T | PromiseLike<T>) => void;
+  let reject: (reason?: any) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return [resolve!, reject!, promise] as const;
+}
 
-  let [resolve, reject, promise] = withResolvers<void>();
-  let queue: T[] = [];
-  let stopped = false;
-  let result: R | undefined;
-
-  const push = (item: T) => {
-    if (stopped) return;
-    queue.push(item);
-    resolve();
-  };
-
-  const stop = (res?: R) => {
-    stopped = true;
-    result = res;
-    resolve();
-  };
-
-  (async () => {
-    try {
-      await callback(push, stop);
-    } catch (e) {
-      reject(e);
-    }
-  })();
-
-  while (true) {
-    await promise;
-    if (stopped) return result;
-    let _queue = queue;
-    [resolve, reject, promise] = withResolvers<void>();
-    queue = [];
-    yield* _queue;
-  }
+export const makeIterator = async <T>(source: AsyncStreamSource<T>) => {
+  const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
+  return Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
 };
