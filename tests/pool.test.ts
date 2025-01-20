@@ -79,3 +79,43 @@ test('test PoolledIterator 3', async () => {
   expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
 });
+
+test('test PoolledIterator 4', async () => {
+
+  const result: number[] = [];
+
+  const list = PoolledIterator(5, async function* () {
+    for (const value of _.range(0, 10)) {
+      yield value;
+      await new Promise(res => setTimeout(res, 20));
+      result.push(value);
+    }
+  });
+
+  await list.next();
+  await list.next();
+  await new Promise(res => setTimeout(res, 1000));
+
+  expect(result).toEqual([0, 1, 2, 3, 4, 5, 6]);
+
+});
+
+test('test PoolledIterator 5', async () => {
+
+  const result: number[] = [];
+
+  const list = PoolledIterator(Number.MAX_SAFE_INTEGER, async function* () {
+    for (const value of _.range(0, 10)) {
+      yield value;
+      await new Promise(res => setTimeout(res, 20));
+      result.push(value);
+    }
+  });
+
+  await list.next();
+  await list.next();
+  await new Promise(res => setTimeout(res, 1000));
+
+  expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+});
