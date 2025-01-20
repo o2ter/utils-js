@@ -24,9 +24,9 @@
 //
 
 import _ from 'lodash';
-import { Awaitable } from './types/promise';
-import { AsyncStreamSource } from './types/iterable';
-import { makeIterator } from './internal';
+import { Awaitable } from '../types/promise';
+import { AsyncStreamSource } from '../types/iterable';
+import { makeIterator } from '../internal';
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
 

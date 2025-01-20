@@ -24,8 +24,8 @@
 //
 
 import _ from 'lodash';
-import { Awaitable } from './types/promise';
-import { withResolvers } from './internal';
+import { Awaitable } from '../types/promise';
+import { withResolvers } from '../internal';
 
 export const EventIterator = async function* <T, R = any>(
   callback: (
