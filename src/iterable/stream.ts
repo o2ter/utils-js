@@ -43,8 +43,11 @@ const iterableToNodeStream = <T>(
   return _Readable.from((async function* () {
     const iterator = await makeIterator(_.isFunction(iterable) ? iterable() : iterable);
     try {
-      for (let step = await iterator.next(); !step.done; step = await iterator.next())
-        yield step.value;
+      while (true) {
+        const { value, done } = await iterator.next();
+        if (done) return value;
+        yield value;
+      }
     } catch (error) {
       if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
       else throw error;

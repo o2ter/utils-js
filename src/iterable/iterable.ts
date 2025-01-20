@@ -67,8 +67,11 @@ class AsyncStream<T> {
     return (async function* () {
       const iterator = await makeIterator(source);
       try {
-        for (let step = await iterator.next(); !step.done; step = await iterator.next())
-          yield step.value;
+        while (true) {
+          const { value, done } = await iterator.next();
+          if (done) return value;
+          yield value;
+        }
       } catch (error) {
         if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
         else throw error;
