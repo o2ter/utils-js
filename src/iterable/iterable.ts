@@ -26,7 +26,6 @@
 import _ from 'lodash';
 import { Awaitable } from '../types/promise';
 import { AsyncStreamSource } from '../types/iterable';
-import { makeIterator } from '../internal';
 
 export const arrayToGenerator = <T>(array: T[]) => function* () { for (const value of array) yield value; }();
 
@@ -65,7 +64,8 @@ class AsyncStream<T> {
   makeAsyncIterable() {
     const source = typeof this.#source === 'function' ? this.#source() : this.#source;
     return (async function* () {
-      const iterator = await makeIterator(source);
+      const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
+      const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
       try {
         while (true) {
           const { value, done } = await iterator.next();
@@ -152,19 +152,24 @@ export type { AsyncStream };
 
 export const asyncStream = <T>(source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) => new AsyncStream(source);
 
-export async function* parallelMap<T, R>(
-  stream: AsyncStreamSource<T>,
+export async function* parallelMap<T, R, TReturn = any>(
+  stream: AsyncStreamSource<T, TReturn>,
   parallel: number,
   transform: (value: T) => Awaitable<R>
 ) {
   const queue: Promise<R>[] = [];
-  const iterator = await makeIterator(stream);
+  const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
+  const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
   try {
-    for (let step = await iterator.next(); !step.done; step = await iterator.next()) {
+    while (true) {
+      const { value, done } = await iterator.next();
+      if (done) {
+        while (!_.isEmpty(queue)) yield await queue.shift()!;
+        return value;
+      }
       if (queue.length >= parallel) yield await queue.shift()!;
-      queue.push((async () => transform(step.value))());
+      queue.push((async () => transform(value))());
     }
-    while (!_.isEmpty(queue)) yield await queue.shift()!;
   } catch (error) {
     if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
     else throw error;
@@ -179,11 +184,14 @@ export async function* parallelFlatMap<T, R>(
   transform: (value: T) => AsyncStreamSource<R>
 ) {
   const queue: AsyncStreamSource<R>[] = [];
-  const iterator = await makeIterator(stream);
+  const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
+  const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
   try {
     for (let step = await iterator.next(); !step.done; step = await iterator.next()) {
       if (queue.length >= parallel) {
-        const iterator = await makeIterator(queue.shift()!);
+        const stream = queue.shift()!;
+        const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
+        const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
         try {
           for (let step = await iterator.next(); !step.done; step = await iterator.next())
             yield step.value;
@@ -195,7 +203,9 @@ export async function* parallelFlatMap<T, R>(
       queue.push(transform(step.value));
     }
     while (!_.isEmpty(queue)) {
-      const iterator = await makeIterator(queue.shift()!);
+      const stream = queue.shift()!;
+      const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
+      const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
       try {
         for (let step = await iterator.next(); !step.done; step = await iterator.next())
           yield step.value;

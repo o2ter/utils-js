@@ -35,8 +35,3 @@ export const withResolvers = <T>() => {
   });
   return [resolve!, reject!, promise] as const;
 }
-
-export const makeIterator = async <T>(source: AsyncStreamSource<T>) => {
-  const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
-  return Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
-};

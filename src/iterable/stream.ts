@@ -28,7 +28,6 @@ import type { Readable } from 'node:stream';
 import { Awaitable } from '../types/promise';
 import { binaryToBuffer } from '../buffer';
 import { BinaryData } from '../types/buffer';
-import { makeIterator } from '../internal';
 
 export const isReadableStream = (x: any): x is ReadableStream | Readable => {
   if (typeof ReadableStream !== 'undefined' && x instanceof ReadableStream) return true;
@@ -41,7 +40,8 @@ const iterableToNodeStream = <T>(
 ) => {
   const _Readable = require('node:stream').Readable as typeof Readable;
   return _Readable.from((async function* () {
-    const iterator = await makeIterator(_.isFunction(iterable) ? iterable() : iterable);
+    const source = _.isFunction(iterable) ? iterable() : iterable;
+    const iterator = (await source)[Symbol.asyncIterator]();
     try {
       while (true) {
         const { value, done } = await iterator.next();
@@ -94,7 +94,7 @@ export async function* binaryStreamChunk(
 ) {
   if (Symbol.asyncIterator in stream) {
     let buffer = Buffer.from([]);
-    const iterator = await makeIterator(stream);
+    const iterator = stream[Symbol.asyncIterator]();
     try {
       for (let step = await iterator.next(); !step.done; step = await iterator.next()) {
         buffer = Buffer.concat([buffer, binaryToBuffer(step.value)] as any);

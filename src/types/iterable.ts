@@ -25,4 +25,4 @@
 
 import { Awaitable } from './promise';
 
-export type AsyncStreamSource<T> = Awaitable<T[] | AsyncIterable<T>>;
+export type AsyncStreamSource<T, TReturn = any> = Awaitable<T[] | AsyncIterable<T, TReturn>>;
