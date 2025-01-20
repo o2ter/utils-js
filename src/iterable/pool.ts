@@ -55,14 +55,10 @@ export const PoolledIterator = <T>(size: number, source: AsyncStreamSource<T> | 
 
   return (async function* () {
     while (!done) {
-      try {
-        yield* await push[2];
-        push = withResolvers();
-        pool = [];
-        poll[0]();
-      } catch (e) {
-        console.error(e);
-      }
+      yield* await push[2];
+      push = withResolvers();
+      pool = [];
+      poll[0]();
     }
   })();
 };
