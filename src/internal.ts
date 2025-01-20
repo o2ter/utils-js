@@ -24,7 +24,6 @@
 //
 
 import _ from 'lodash';
-import { AsyncStreamSource } from './types/iterable';
 
 export const withResolvers = <T>() => {
   let resolve: (value: T | PromiseLike<T>) => void;
