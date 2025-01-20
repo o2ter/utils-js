@@ -50,18 +50,18 @@ export const IteratorPool = <T>(
         pool.push(value);
         push[0](pool);
       }
+      done = true;
       push[0]([]);
     } catch (e) {
-      push[1](e);
-    } finally {
       done = true;
+      push[1](e);
     }
   })();
 
-  while (!done) {
+  do {
     yield* await push[2];
     push = withResolvers();
     pool = [];
     poll[0]();
-  }
+  } while (!done);
 });
