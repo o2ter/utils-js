@@ -28,10 +28,10 @@ import { AsyncStreamSource } from '../types/iterable';
 import { withResolvers } from '../internal';
 import { asyncStream } from './iterable';
 
-export const IteratorPool = <T>(
+export const _IteratorPool = <T>(
   size: number,
   source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>),
-) => asyncStream(async function* () {
+) => async function* () {
 
   let pool: T[] = [];
   let done: boolean | undefined;
@@ -64,4 +64,9 @@ export const IteratorPool = <T>(
     pool = [];
     poll[0]();
   } while (!done);
-});
+};
+
+export const IteratorPool = <T>(
+  size: number,
+  source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>),
+) => asyncStream(_IteratorPool(size, source));

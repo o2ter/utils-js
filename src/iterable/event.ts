@@ -28,12 +28,12 @@ import { Awaitable } from '../types/promise';
 import { withResolvers } from '../internal';
 import { asyncStream } from './iterable';
 
-export const EventIterator = <T, R = any>(
+export const _EventIterator = <T, R = any>(
   callback: (
     push: (item: T) => void,
     stop: (result?: R) => void,
   ) => Awaitable<void>,
-) => asyncStream(async function* () {
+) => async function* () {
 
   let [resolve, reject, promise] = withResolvers<void>();
   let queue: T[] = [];
@@ -72,4 +72,11 @@ export const EventIterator = <T, R = any>(
       console.error(e);
     }
   }
-});
+};
+
+export const EventIterator = <T, R = any>(
+  callback: (
+    push: (item: T) => void,
+    stop: (result?: R) => void,
+  ) => Awaitable<void>,
+) => asyncStream(_EventIterator(callback));
