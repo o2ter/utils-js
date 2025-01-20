@@ -229,7 +229,7 @@ test('test asyncStream throw', async () => {
       }
     } catch (e) {
       check = e;
-      //throw e;
+      throw e;
     }
   });
 
@@ -239,5 +239,51 @@ test('test asyncStream throw', async () => {
   await iterable.next();
   await iterable.next();
   await expect(() => iterable.throw(error)).rejects.toThrow('thrown');
-  //expect(check).toEqual(error);
+  expect(check).toEqual(error);
+});
+
+test('test asyncStream throw 2', async () => {
+
+  let check;
+  const result = asyncStream(async function* () {
+    try {
+      for (const i of [1, 2, 3, 4]) {
+        yield i;
+      }
+    } catch (e) {
+      check = e;
+      throw e;
+    }
+  }).parallelMap(1, v => v + 1);
+
+  const error = new Error('thrown');
+
+  const iterable = result.makeAsyncIterable();
+  await iterable.next();
+  await iterable.next();
+  await expect(() => iterable.throw(error)).rejects.toThrow('thrown');
+  expect(check).toEqual(error);
+});
+
+test('test asyncStream throw 3', async () => {
+
+  let check;
+  const result = asyncStream(async function* () {
+    try {
+      for (const i of [1, 2, 3, 4]) {
+        yield i;
+      }
+    } catch (e) {
+      check = e;
+      throw e;
+    }
+  }).parallelFlatMap(1, v => _.range(0, v));
+
+  const error = new Error('thrown');
+
+  const iterable = result.makeAsyncIterable();
+  await iterable.next();
+  await iterable.next();
+  await expect(() => iterable.throw(error)).rejects.toThrow('thrown');
+  expect(check).toEqual(error);
 });
