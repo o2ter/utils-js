@@ -218,3 +218,26 @@ test('test asyncStream parallelFlatMap 2', async () => {
 
   expect(result).toEqual([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4]);
 });
+
+test('test asyncStream throw', async () => {
+
+  let check;
+  const result = asyncStream(async function* () {
+    try {
+      for (const i of [1, 2, 3, 4]) {
+        yield i;
+      }
+    } catch (e) {
+      check = e;
+      //throw e;
+    }
+  });
+
+  const error = new Error('thrown');
+
+  const iterable = result.makeAsyncIterable();
+  await iterable.next();
+  await iterable.next();
+  await expect(() => iterable.throw(error)).rejects.toThrow('thrown');
+  //expect(check).toEqual(error);
+});

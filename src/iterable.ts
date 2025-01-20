@@ -66,7 +66,12 @@ class AsyncStream<T> {
     const source = typeof this.#source === 'function' ? this.#source() : this.#source;
     return (async function* () {
       const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
-      for await (const value of iterable) yield value;
+      try {
+        for await (const value of iterable) yield value;
+      } catch (error) {
+        if ('throw' in iterable && _.isFunction(iterable.throw)) await iterable.throw(error);
+        else throw error;
+      }
     })();
   }
 
@@ -75,30 +80,42 @@ class AsyncStream<T> {
   }
 
   map<R>(transform: (value: T) => Awaitable<R>) {
-    const self = this;
+    const iterable = this.makeAsyncIterable();
     return asyncStream(async function* () {
-      for await (const value of self) {
-        yield await transform(value);
+      try {
+        for await (const value of iterable) {
+          yield await transform(value);
+        }
+      } catch (error) {
+        await iterable.throw(error);
       }
     });
   }
 
   flatMap<R>(transform: (value: T) => AsyncStreamSource<R>) {
-    const self = this;
+    const iterable = this.makeAsyncIterable();
     return asyncStream(async function* () {
-      for await (const value of self) {
-        const transformed = transform(value);
-        const iterable = Symbol.iterator in transformed || Symbol.asyncIterator in transformed ? transformed : await transformed;
-        for await (const value of iterable) yield value;
+      try {
+        for await (const value of iterable) {
+          const transformed = transform(value);
+          const iterable = Symbol.iterator in transformed || Symbol.asyncIterator in transformed ? transformed : await transformed;
+          for await (const value of iterable) yield value;
+        }
+      } catch (error) {
+        await iterable.throw(error);
       }
     });
   }
 
   filter<R>(isIncluded: (value: T) => Awaitable<boolean>) {
-    const self = this;
+    const iterable = this.makeAsyncIterable();
     return asyncStream(async function* () {
-      for await (const value of self) {
-        if (await isIncluded(value)) yield value;
+      try {
+        for await (const value of iterable) {
+          if (await isIncluded(value)) yield value;
+        }
+      } catch (error) {
+        await iterable.throw(error);
       }
     });
   }
@@ -112,8 +129,13 @@ class AsyncStream<T> {
   }
 
   async forEach(callback: (value: T) => Awaitable<void>) {
-    for await (const value of this) {
-      await callback(value);
+    const iterable = this.makeAsyncIterable();
+    try {
+      for await (const value of iterable) {
+        await callback(value);
+      }
+    } catch (error) {
+      await iterable.throw(error);
     }
   }
 
@@ -135,10 +157,13 @@ export async function* parallelMap<T, R>(
   const source = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
   try {
     for await (const value of source) {
-      if (queue.length >= parallel) yield queue.shift()!;
+      if (queue.length >= parallel) yield await queue.shift()!;
       queue.push((async () => transform(value))());
     }
-    while (!_.isEmpty(queue)) yield queue.shift()!;
+    while (!_.isEmpty(queue)) yield await queue.shift()!;
+  } catch (error) {
+    if ('throw' in source && _.isFunction(source.throw)) await source.throw(error);
+    else throw error;
   } finally {
     await Promise.allSettled(queue);
   }
@@ -168,6 +193,9 @@ export async function* parallelFlatMap<T, R>(
         for await (const value of await iterable) yield value;
       }
     }
+  } catch (error) {
+    if ('throw' in source && _.isFunction(source.throw)) await source.throw(error);
+    else throw error;
   } finally {
     await Promise.allSettled(queue);
   }
