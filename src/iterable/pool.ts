@@ -27,7 +27,7 @@ import _ from 'lodash';
 import { AsyncStreamSource } from '../types/iterable';
 import { withResolvers } from '../internal';
 
-export const PoolledIterator = <T>(size: number, source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) => {
+export const IteratorPool = <T>(size: number, source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>)) => {
   let pool: T[] = [];
   let done: boolean | undefined;
   let push = withResolvers<T[]>();
