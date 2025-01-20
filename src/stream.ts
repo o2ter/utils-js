@@ -91,14 +91,20 @@ export async function* binaryStreamChunk(
 ) {
   if (Symbol.asyncIterator in stream) {
     let buffer = Buffer.from([]);
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, binaryToBuffer(chunk)] as any);
-      while (buffer.byteLength >= chunkSize) {
-        yield buffer.subarray(0, chunkSize);
-        buffer = buffer.subarray(chunkSize);
+    const iterator = await makeIterator(stream);
+    try {
+      for (let step = await iterator.next(); !step.done; step = await iterator.next()) {
+        buffer = Buffer.concat([buffer, binaryToBuffer(step.value)] as any);
+        while (buffer.byteLength >= chunkSize) {
+          yield buffer.subarray(0, chunkSize);
+          buffer = buffer.subarray(chunkSize);
+        }
       }
+      if (buffer.length) yield buffer;
+    } catch (error) {
+      if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
+      else throw error;
     }
-    if (buffer.length) yield buffer;
   } else {
     let buffer = binaryToBuffer(stream);
     while (buffer.byteLength >= chunkSize) {
