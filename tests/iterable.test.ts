@@ -142,7 +142,7 @@ test('test asyncStream flatMap 1', async () => {
   });
 
   const result: number[] = [];
-  for await (const val of stream.flatMap(v => _.range(0, v))) {
+  for await (const val of stream.flatMap(v => _.range(v))) {
     result.push(val);
   }
 
@@ -156,7 +156,7 @@ test('test asyncStream flatMap 2', async () => {
   });
 
   const result: number[] = [];
-  for await (const val of stream.flatMap(async v => _.range(0, v))) {
+  for await (const val of stream.flatMap(async v => _.range(v))) {
     result.push(val);
   }
 
@@ -198,7 +198,7 @@ test('test asyncStream parallelFlatMap 1', async () => {
   });
 
   const result: number[] = [];
-  for await (const val of stream.parallelFlatMap(2, v => _.range(0, v))) {
+  for await (const val of stream.parallelFlatMap(2, v => _.range(v))) {
     result.push(val);
   }
 
@@ -212,7 +212,7 @@ test('test asyncStream parallelFlatMap 2', async () => {
   });
 
   const result: number[] = [];
-  for await (const val of stream.parallelFlatMap(2, async v => _.range(0, v))) {
+  for await (const val of stream.parallelFlatMap(2, async v => _.range(v))) {
     result.push(val);
   }
 
@@ -277,7 +277,7 @@ test('test asyncStream throw 3', async () => {
       check = e;
       throw e;
     }
-  }).parallelFlatMap(1, v => _.range(0, v));
+  }).parallelFlatMap(1, v => _.range(v));
 
   const error = new Error('thrown');
 

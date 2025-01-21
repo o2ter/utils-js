@@ -30,7 +30,7 @@ import { asyncIterableToArray, IteratorPool } from '../src';
 test('test PoolledIterator', async () => {
 
   const list = IteratorPool(5, async function* () {
-    for (const value of _.range(0, 10)) {
+    for (const value of _.range(10)) {
       yield value;
       await new Promise(res => setTimeout(res, 100));
     }
@@ -45,7 +45,7 @@ test('test PoolledIterator', async () => {
 test('test PoolledIterator 2', async () => {
 
   const list = IteratorPool(5, async function* () {
-    for (const value of _.range(0, 10)) {
+    for (const value of _.range(10)) {
       yield value;
       await new Promise(res => setTimeout(res, 10));
     }
@@ -64,7 +64,7 @@ test('test PoolledIterator 2', async () => {
 test('test PoolledIterator 3', async () => {
 
   const list = IteratorPool(5, async function* () {
-    for (const value of _.range(0, 10)) {
+    for (const value of _.range(10)) {
       yield value;
       await new Promise(res => setTimeout(res, 200));
     }
@@ -85,7 +85,7 @@ test('test PoolledIterator 4', async () => {
   const result: number[] = [];
 
   const list = IteratorPool(5, async function* () {
-    for (const value of _.range(0, 10)) {
+    for (const value of _.range(10)) {
       yield value;
       await new Promise(res => setTimeout(res, 20));
       result.push(value);
@@ -106,7 +106,7 @@ test('test PoolledIterator 5', async () => {
   const result: number[] = [];
 
   const list = IteratorPool(Number.MAX_SAFE_INTEGER, async function* () {
-    for (const value of _.range(0, 10)) {
+    for (const value of _.range(10)) {
       yield value;
       await new Promise(res => setTimeout(res, 20));
       result.push(value);
