@@ -38,3 +38,7 @@ export type ReadonlyKeys<T> = {
 export type OmitType<T, U> = Pick<T, Exclude<{
   [K in keyof T]: T[K] extends U ? never : K;
 }[keyof T], undefined>>;
+
+export type MergeObject<T extends object> = {
+  [K in T extends any ? keyof T : never]: T extends { [k in K]?: any } ? T[K] : never;
+};
