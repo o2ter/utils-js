@@ -16,7 +16,6 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "emitDeclarationOnly": true,
-    "downlevelIteration": true,
     "stripInternal": true
   },
   "exclude":[
