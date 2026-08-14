@@ -29,16 +29,24 @@ import { Awaitable } from '../types/promise';
 import { binaryToBuffer } from '../buffer';
 import { BinaryData } from '../types/buffer';
 
+const resolveNodeStream = () => {
+  try {
+    return require('node:stream').Readable;
+  } catch {
+    return undefined;
+  }
+};
+
 export const isReadableStream = (x: any): x is ReadableStream | Readable => {
   if (typeof ReadableStream !== 'undefined' && x instanceof ReadableStream) return true;
-  if (typeof window === 'undefined' && x instanceof require('node:stream').Readable) return true;
+  if (typeof window === 'undefined' && x instanceof resolveNodeStream()) return true;
   return false;
 };
 
 const iterableToNodeStream = <T>(
   iterable: Awaitable<AsyncIterable<T>> | (() => Awaitable<AsyncIterable<T>>)
 ) => {
-  const _Readable = require('node:stream').Readable as typeof Readable;
+  const _Readable = resolveNodeStream() as typeof Readable;
   return _Readable.from((async function* () {
     const source = _.isFunction(iterable) ? iterable() : iterable;
     const iterator = (await source)[Symbol.asyncIterator]();

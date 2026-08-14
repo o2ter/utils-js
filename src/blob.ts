@@ -23,8 +23,16 @@
 //  THE SOFTWARE.
 //
 
+const resolveNodeBlob = () => {
+  try {
+    return require('node:buffer').Blob;
+  } catch {
+    return undefined;
+  }
+};
+
 export const isBlob = (x: any): x is Blob => {
   if (typeof Blob !== 'undefined' && x instanceof Blob) return true;
-  if (typeof window === 'undefined' && x instanceof require('node:buffer').Blob) return true;
+  if (typeof window === 'undefined' && x instanceof resolveNodeBlob()) return true;
   return false;
 };
