@@ -62,7 +62,10 @@ export const _EventIterator = <T, R = any>(
 
   while (true) {
     await promise;
-    if (stopped) return result;
+    if (stopped) {
+      if (queue.length > 0) yield* queue;
+      return result;
+    }
     let _queue = queue;
     [resolve, reject, promise] = withResolvers<void>();
     queue = [];
