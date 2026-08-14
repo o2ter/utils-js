@@ -42,6 +42,6 @@ test('test EventIterator', async () => {
 
   const result = await asyncIterableToArray(list);
 
-  expect(result).toEqual([0, 1, 2, 3, 4]);
+  expect(result).toEqual([0, 1, 2, 3, 4, 5]);
 
 });
