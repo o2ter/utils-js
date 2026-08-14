@@ -61,16 +61,12 @@ export const _EventIterator = <T, R = any>(
   })();
 
   while (true) {
-    try {
-      await promise;
-      if (stopped) return result;
-      let _queue = queue;
-      [resolve, reject, promise] = withResolvers<void>();
-      queue = [];
-      yield* _queue;
-    } catch (e) {
-      console.error(e);
-    }
+    await promise;
+    if (stopped) return result;
+    let _queue = queue;
+    [resolve, reject, promise] = withResolvers<void>();
+    queue = [];
+    yield* _queue;
   }
 };
 
