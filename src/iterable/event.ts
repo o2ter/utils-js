@@ -52,25 +52,28 @@ export const _EventIterator = <T, R = any>(
     resolve();
   };
 
-  (async () => {
+  const final = (async () => {
     try {
       await callback(push, stop);
-    } catch (e) {
-      reject(e);
+    } catch (err) {
+      stopped = true;
+      reject(err);
+      throw err;
     }
   })();
 
   while (true) {
     await promise;
-    if (stopped) {
-      if (queue.length > 0) yield* queue;
-      return result;
-    }
+    if (stopped) break;
     let _queue = queue;
     [resolve, reject, promise] = withResolvers<void>();
     queue = [];
     yield* _queue;
   }
+
+  if (queue.length > 0) yield* queue;
+  await final;
+  return result;
 };
 
 export const EventIterator = <T, R = any>(
