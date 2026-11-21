@@ -23,7 +23,6 @@
 //  THE SOFTWARE.
 //
 
-import _ from 'lodash';
 import { AsyncStreamSource } from '../types/iterable';
 import { withResolvers } from '../internal';
 import { asyncStream } from './iterable';
@@ -32,21 +31,28 @@ export const _IteratorPool = <T>(
   size: number,
   source: AsyncStreamSource<T> | (() => AsyncStreamSource<T>),
 ) => async function* () {
+  if (!Number.isSafeInteger(size) || size < 1) {
+    throw Error('Iterator pool size must be a positive integer');
+  }
 
   let pool: T[] = [];
   let done: boolean | undefined;
+  let cancelled = false;
+  let failure: { error: unknown } | undefined;
   let push = withResolvers<T[]>();
   let poll = withResolvers<void>();
 
-  (async () => {
+  const producer = (async () => {
     try {
       const stream = typeof source === 'function' ? source() : source;
       const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
       for await (const value of iterable) {
+        if (cancelled) break;
         if (pool.length >= size) {
           await poll[2];
           poll = withResolvers();
         }
+        if (cancelled) break;
         pool.push(value);
         push[0](pool);
       }
@@ -54,16 +60,24 @@ export const _IteratorPool = <T>(
       push[0]([]);
     } catch (e) {
       done = true;
-      push[1](e);
+      failure = { error: e };
+      push[0](pool);
     }
   })();
 
-  do {
-    yield* await push[2];
-    push = withResolvers();
-    pool = [];
+  try {
+    do {
+      yield* await push[2];
+      push = withResolvers();
+      pool = [];
+      poll[0]();
+    } while (!done);
+  } finally {
+    cancelled = true;
     poll[0]();
-  } while (!done);
+    await producer;
+    if (failure) throw failure.error;
+  }
 };
 
 export const IteratorPool = <T>(

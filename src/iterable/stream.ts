@@ -50,15 +50,21 @@ const iterableToNodeStream = <T>(
   return _Readable.from((async function* () {
     const source = _.isFunction(iterable) ? iterable() : iterable;
     const iterator = (await source)[Symbol.asyncIterator]();
+    let done = false;
     try {
       while (true) {
-        const { value, done } = await iterator.next();
-        if (done) return value;
-        yield value;
+        const step = await iterator.next();
+        if (step.done) {
+          done = true;
+          return step.value;
+        }
+        yield step.value;
       }
     } catch (error) {
       if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
       else throw error;
+    } finally {
+      if (!done) await iterator.return?.();
     }
   })());
 }
@@ -89,7 +95,19 @@ const iterableToReadableStream = <T>(
       }
     },
     async cancel(reason) {
-      await iterator.throw?.(_.isString(reason) ? Error(reason) : reason ?? Error('aborted'));
+      let failure: { error: unknown } | undefined;
+      try {
+        await iterator.throw?.(_.isString(reason) ? Error(reason) : reason ?? Error('aborted'));
+      } catch (error) {
+        failure = { error };
+      }
+      try {
+        await iterator.return?.();
+      } catch (error) {
+        if (failure) throw new AggregateError([failure.error, error], 'Stream cancellation and cleanup failed');
+        throw error;
+      }
+      if (failure) throw failure.error;
     },
   });
 }
@@ -100,6 +118,9 @@ export async function* binaryStreamChunk(
   stream: BinaryData | AsyncIterable<BinaryData>,
   chunkSize: number
 ) {
+  if (!Number.isSafeInteger(chunkSize) || chunkSize < 1) {
+    throw Error('Chunk size must be a positive integer');
+  }
   if (Symbol.asyncIterator in stream) {
     let buffer = Buffer.from([]);
     const iterator = stream[Symbol.asyncIterator]();

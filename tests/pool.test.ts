@@ -121,3 +121,41 @@ test('test PoolledIterator 5', async () => {
   expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
 });
+
+test('IteratorPool preserves buffered values before reporting source errors', async () => {
+  const error = Error('source failed');
+  let failed!: () => void;
+  const failureStarted = new Promise<void>(resolve => { failed = resolve; });
+  async function* source() {
+    yield 1;
+    failed();
+    throw error;
+  }
+  const iterator = IteratorPool(5, source()).makeAsyncIterable();
+  await expect(iterator.next()).resolves.toEqual({ value: 1, done: false });
+  await failureStarted;
+  await new Promise<void>(resolve => setImmediate(resolve));
+  await expect(iterator.next()).rejects.toBe(error);
+});
+
+test('IteratorPool closes its producer when the consumer stops', async () => {
+  let closed = false;
+  async function* source() {
+    try {
+      let value = 0;
+      while (true) yield value++;
+    } finally {
+      closed = true;
+    }
+  }
+  const iterator = IteratorPool(2, source()).makeAsyncIterable();
+  expect((await iterator.next()).value).toBe(0);
+  await iterator.return(undefined);
+  expect(closed).toBe(true);
+});
+
+test('IteratorPool rejects invalid sizes', async () => {
+  for (const size of [0, -1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    await expect(asyncIterableToArray(IteratorPool(size, [1]))).rejects.toThrow('Iterator pool size must be a positive integer');
+  }
+});

@@ -66,15 +66,21 @@ class AsyncStream<T> {
     return (async function* () {
       const iterable = Symbol.iterator in source || Symbol.asyncIterator in source ? source : await source;
       const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
+      let done = false;
       try {
         while (true) {
-          const { value, done } = await iterator.next();
-          if (done) return value;
-          yield value;
+          const step = await iterator.next();
+          if (step.done) {
+            done = true;
+            return step.value;
+          }
+          yield step.value;
         }
       } catch (error) {
         if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
         else throw error;
+      } finally {
+        if (!done && iterator.return) await iterator.return();
       }
     })();
   }
@@ -155,27 +161,110 @@ export const asyncStream = <T>(source: AsyncStreamSource<T> | (() => AsyncStream
 export async function* parallelMap<T, R, TReturn = any>(
   stream: AsyncStreamSource<T, TReturn>,
   parallel: number,
-  transform: (value: T) => Awaitable<R>
+  transform: (value: T) => Awaitable<R>,
 ) {
-  const queue: Promise<R>[] = [];
-  const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream ? stream : await stream;
-  const iterator = Symbol.iterator in iterable ? iterable[Symbol.iterator]() : iterable[Symbol.asyncIterator]();
-  try {
-    while (true) {
-      const { value, done } = await iterator.next();
-      if (done) {
-        while (!_.isEmpty(queue)) yield await queue.shift()!;
-        return value;
-      }
-      if (queue.length >= parallel) yield await queue.shift()!;
-      queue.push((async () => transform(value))());
-    }
-  } catch (error) {
-    if ('throw' in iterator && _.isFunction(iterator.throw)) await iterator.throw(error);
-    else throw error;
-  } finally {
-    await Promise.allSettled(queue);
+  if (!Number.isSafeInteger(parallel) || parallel < 1) {
+    throw new Error('parallel must be a positive integer');
   }
+
+  type Result<V> =
+    | { ok: true; value: V }
+    | { ok: false; error: unknown };
+
+  const settle = <V>(promise: PromiseLike<V>): Promise<Result<V>> =>
+    Promise.resolve(promise).then(
+      value => ({ ok: true, value }),
+      error => ({ ok: false, error }),
+    );
+  const runTransform = async (value: T): Promise<Awaited<R>> => await transform(value);
+
+  const iterable = Symbol.iterator in stream || Symbol.asyncIterator in stream
+    ? stream
+    : await stream;
+  const iterator = Symbol.iterator in iterable
+    ? iterable[Symbol.iterator]()
+    : iterable[Symbol.asyncIterator]();
+
+  const queue: Promise<Result<Awaited<R>>>[] = [];
+  let next: Promise<Result<IteratorResult<T, TReturn | undefined>>> | undefined;
+  let done = false;
+  let sourceClosed = false;
+  let returnValue: TReturn | undefined;
+  let sourceError: Result<never> | undefined;
+  let failed = false;
+  let failure: unknown;
+
+  try {
+    while (!done || next || queue.length) {
+      if (!done && !next && queue.length < parallel) {
+        next = settle(Promise.resolve().then<IteratorResult<T, TReturn | undefined>>(() => iterator.next()));
+      }
+
+      const head = queue[0];
+      const ready = await Promise.race([
+        ...next ? [next.then(result => ({ kind: 'next' as const, result }))] : [],
+        ...head ? [head.then(result => ({ kind: 'data' as const, result }))] : [],
+      ]);
+
+      if (ready.kind === 'next') {
+        next = undefined;
+        if (!ready.result.ok) {
+          done = true;
+          sourceError = ready.result;
+        } else if (ready.result.value.done) {
+          done = true;
+          sourceClosed = true;
+          returnValue = ready.result.value.value;
+        } else {
+          const value = ready.result.value.value;
+          queue.push(settle(runTransform(value)));
+        }
+      } else {
+        queue.shift();
+        if (!ready.result.ok) throw ready.result.error;
+        yield ready.result.value;
+      }
+    }
+
+    if (sourceError && !sourceError.ok) throw sourceError.error;
+    return returnValue;
+  } catch (error) {
+    failed = true;
+    failure = error;
+  } finally {
+    const cleanupErrors: unknown[] = [];
+    if (failed && sourceError && !sourceError.ok && sourceError.error !== failure) {
+      cleanupErrors.push(sourceError.error);
+    }
+    if (next) {
+      const result = await next;
+      if (!result.ok && (!failed || result.error !== failure)) cleanupErrors.push(result.error);
+      if (result.ok && result.value.done) sourceClosed = true;
+    }
+    if (!sourceClosed && failed && !sourceError && 'throw' in iterator && _.isFunction(iterator.throw)) {
+      try {
+        await iterator.throw(failure);
+      } catch (error) {
+        if (error !== failure) cleanupErrors.push(error);
+      }
+    }
+    if (!sourceClosed && iterator.return) {
+      try {
+        await iterator.return();
+      } catch (error) {
+        if (!failed || error !== failure) cleanupErrors.push(error);
+      }
+    }
+    for (const result of await Promise.all(queue)) {
+      if (!result.ok && (!failed || result.error !== failure)) cleanupErrors.push(result.error);
+    }
+    if (cleanupErrors.length) {
+      if (failed) throw new AggregateError([failure, ...cleanupErrors], 'Parallel mapping and cleanup failed');
+      if (cleanupErrors.length === 1) throw cleanupErrors[0];
+      throw new AggregateError(cleanupErrors, 'Parallel mapping cleanup failed');
+    }
+  }
+  if (failed) throw failure;
 }
 
 export async function* parallelFlatMap<T, R>(
